@@ -19,7 +19,7 @@ builder.Services.AddReverseProxy()
 
             if(path.StartsWith("/order",StringComparison.OrdinalIgnoreCase))
             {
-                //Auth Server'a istek atýp token al, header'a ekle
+                //Send a request to the Auth Server and obtain a token, then add it to the header.
 
             }
             if (path.StartsWith("/basket",StringComparison.OrdinalIgnoreCase))
