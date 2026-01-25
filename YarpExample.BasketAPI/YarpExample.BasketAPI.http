@@ -1,0 +1,6 @@
+@YarpExample.BasketAPI_HostAddress = http://localhost:5201
+
+GET {{YarpExample.BasketAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
