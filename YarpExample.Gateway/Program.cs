@@ -1,5 +1,4 @@
-using Yarp.ReverseProxy.Transforms;
-
+﻿using Yarp.ReverseProxy.Transforms;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -8,28 +7,20 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
-    .AddTransforms(transformBuilder =>
+    .AddTransforms(context =>
     {
-        transformBuilder.AddRequestTransform(async transformRequest =>
+        context.AddRequestTransform(async transformContext =>
         {
-            string path = transformRequest.Path.Value!;
-
-
-            if(path.StartsWith("/order",StringComparison.OrdinalIgnoreCase))
-            {
-                //Send a request to the Auth Server and obtain a token, then add it to the header.
-
-            }
-            if (path.StartsWith("/basket",StringComparison.OrdinalIgnoreCase))
-            {
-                var newPath = "/api/Basket" + path.Substring("/basket".Length);
-                transformRequest.Path = newPath;
-            }
-
+            Guid guid = Guid.NewGuid();
+            transformContext.ProxyRequest.Headers.Add("testId", guid.ToString());
+            await Task.CompletedTask;
         });
     });
+
+
 
 var app = builder.Build();
 
@@ -40,9 +31,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapReverseProxy();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapReverseProxy();
+
+
 app.MapControllers();
 app.Run();

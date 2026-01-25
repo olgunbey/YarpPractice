@@ -9,9 +9,9 @@ namespace YarpExample.BasketAPI.Controllers
     public class BasketController : ControllerBase
     {
         [HttpPost]
-        public IActionResult SaveBasket(SaveBasketRequest saveBasketRequest)
+        public IActionResult SaveBasket([FromBody]SaveBasketRequest saveBasketRequest, [FromHeader] string testId)
         {
-            return Ok("Basket saved successfully.");
+            return Ok("Basket saved successfully. "+ testId);
         }
     }
 }
