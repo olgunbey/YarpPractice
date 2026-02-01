@@ -18,7 +18,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ValidIssuer = "http://localhost:5127",
-            ValidAudience = "http://localhost:5160",
+            ValidAudience = "http://localhost:5160", //YARP gateway address
             ClockSkew = TimeSpan.Zero,
             IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes("testSecrettestSecrettestSecrettestSecrettestSecrettestSecret"))
         };
