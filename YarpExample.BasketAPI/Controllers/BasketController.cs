@@ -10,9 +10,9 @@ namespace YarpExample.BasketAPI.Controllers
     {
         [HttpPost]
         [Authorize]
-        public IActionResult SaveBasket([FromBody]SaveBasketRequest saveBasketRequest, [FromHeader] string testId)
+        public IActionResult SaveBasket([FromBody]SaveBasketRequest saveBasketRequest)
         {
-            return Ok("Basket saved successfully. " + testId);
+            return Ok("Basket saved successfully. ");
         }
     }
 }

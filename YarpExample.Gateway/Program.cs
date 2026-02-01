@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Yarp.ReverseProxy.Transforms;
+﻿using Yarp.ReverseProxy.Transforms;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -12,11 +11,17 @@ builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
     .AddTransforms(context =>
     {
-        context.AddRequestTransform(async transformContext =>
+        //context.AddRequestTransform(async transformContext =>
+        //{
+        //    Guid guid = Guid.NewGuid();
+        //    transformContext.ProxyRequest.Headers.Add("testId", guid.ToString());
+        //    await Task.CompletedTask;
+        //});
+
+        context.AddRequestTransform(async tContext =>
         {
-            Guid guid = Guid.NewGuid();
-            transformContext.ProxyRequest.Headers.Add("testId", guid.ToString());
-            await Task.CompletedTask;
+            var uri = tContext.ProxyRequest.RequestUri;
+            var path = tContext.Path;
         });
     });
 

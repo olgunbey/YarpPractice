@@ -1,0 +1,6 @@
+@PermiCore.Auth_HostAddress = http://localhost:5127
+
+GET {{PermiCore.Auth_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
