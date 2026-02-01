@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using YarpExample.BasketAPI.Models;
 
@@ -9,9 +9,10 @@ namespace YarpExample.BasketAPI.Controllers
     public class BasketController : ControllerBase
     {
         [HttpPost]
+        [Authorize]
         public IActionResult SaveBasket([FromBody]SaveBasketRequest saveBasketRequest, [FromHeader] string testId)
         {
-            return Ok("Basket saved successfully. "+ testId);
+            return Ok("Basket saved successfully. " + testId);
         }
     }
 }
