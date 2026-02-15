@@ -8,5 +8,6 @@
         public string AccessToken { get; set; }
         public DateTime RefreshTime { get; set; }
         public DateTime AccessTime { get; set; }
+        public string ClientSecret { get; set; }
     }
 }
