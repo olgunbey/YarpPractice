@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Net.Http;
 using Yarp.ReverseProxy.Transforms;
 using YarpExample.Gateway.Database;
 using YarpExample.Gateway.Dtos;
+using YarpExample.Gateway.Entity;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -21,48 +23,47 @@ builder.Services.AddReverseProxy()
             var proxyRequest = tContext.ProxyRequest;
             string? clientId = proxyRequest.Headers.GetValues("client_id").FirstOrDefault();
             string? clientSecret = proxyRequest.Headers.GetValues("client_secret").FirstOrDefault();
+            HttpClient httpClient = new HttpClient();
+            RefreshTokenResponseModel? refreshTokenResponseModel = new();
             if (!string.IsNullOrWhiteSpace(clientId) && !string.IsNullOrWhiteSpace(clientSecret))
             {
                 using (ServiceProvider serviceProvider = builder.Services.BuildServiceProvider())
                 {
                     var yarpDbContext = serviceProvider.GetRequiredService<YarpDbContext>();
 
-                    var clientCredentialTable = await yarpDbContext.ClientCredentialTable
-                      .SingleOrDefaultAsync(y => y.ClientId == clientId && y.ClientSecret == clientSecret);
+                    var clientToken = await yarpDbContext.ClientTokenInfo
+                    .Include(y => y.ClientCredentialTable)
+                    .SingleOrDefaultAsync(y => y.ClientId == clientId && y.ClientSecret == clientSecret);
 
-                    if (clientCredentialTable is null)
-                        return;
+                    if (clientToken is null)
+                        throw new Exception("Hata!!");
 
 
-                    if ((DateTime.UtcNow - clientCredentialTable.AccessTime).TotalDays <= 1)
+                    if (clientToken.ClientCredentialTable is not null && (DateTime.UtcNow - clientToken.ClientCredentialTable.AccessTime).TotalDays <= 1)
                     {
-                        //Bu token ile istek atılacak.
-                        string accessToken = clientCredentialTable.AccessToken;
+                        string accessToken = clientToken.ClientCredentialTable.AccessToken;
                         proxyRequest.Headers.Add("Authorization", $"Bearer {accessToken}");
                         return;
                     }
-                    else if ((DateTime.UtcNow - clientCredentialTable.RefreshTime).TotalDays <= 365)
+                    else if (clientToken.ClientCredentialTable is not null && (DateTime.UtcNow - clientToken.ClientCredentialTable.RefreshTime).TotalDays <= 365)
                     {
-                        //Refresh token ile accessToken oluştur.
-                        HttpClient httpClient = new HttpClient();
-                        RefreshTokenResponseModel? refreshTokenResponseModel = new();
-                        RefreshTokenRequestModel refreshTokenRequestModel = new()
+                        AccessTokenRequestModel accessTokenRequestModel = new()
                         {
-                            ClientId = "refresh_id",
-                            ClientSecret = "refresh_secret",
-                            RefreshToken = clientCredentialTable.RefreshToken
+                            ClientId = clientId,
+                            ClientSecret = clientSecret,
+                            GrantType = "refresh_token",
+                            RefreshToken = clientToken.ClientCredentialTable.RefreshToken
                         };
-                        var responseMessage = await httpClient.PostAsJsonAsync("http://localhost:5127/api/Connect/TokenUsingRefreshToken", refreshTokenRequestModel);
+                        var responseMessage = await httpClient.PostAsJsonAsync("http://localhost:5127/api/Connect/Token", accessTokenRequestModel);
 
                         if (responseMessage.IsSuccessStatusCode)
                         {
                             refreshTokenResponseModel = await responseMessage.Content.ReadFromJsonAsync<RefreshTokenResponseModel>();
 
-                            //Yarp'daki clientcredential tokenleri güncelle.
-                            clientCredentialTable.AccessToken = refreshTokenResponseModel!.AccessToken;
-                            clientCredentialTable.RefreshToken = refreshTokenResponseModel!.RefreshToken;
-                            clientCredentialTable.AccessTime = refreshTokenResponseModel!.AccessTime;
-                            clientCredentialTable.RefreshTime = refreshTokenResponseModel!.RefreshTime;
+                            clientToken.ClientCredentialTable.AccessToken = refreshTokenResponseModel!.AccessToken;
+                            clientToken.ClientCredentialTable.RefreshToken = refreshTokenResponseModel!.RefreshToken;
+                            clientToken.ClientCredentialTable.AccessTime = refreshTokenResponseModel!.AccessTime;
+                            clientToken.ClientCredentialTable.RefreshTime = refreshTokenResponseModel!.RefreshTime;
                             await yarpDbContext.SaveChangesAsync();
 
                             string accessToken = refreshTokenResponseModel.AccessToken;
@@ -74,7 +75,32 @@ builder.Services.AddReverseProxy()
                     }
                     else
                     {
-                        //Artık bu kullanıcının servise erişim hakkı bitmiştir, yeni hak için clientCredentialtable'ye yeni kayıt ekle
+                        AccessTokenRequestModel accessTokenRequestModel = new()
+                        {
+                            ClientId =clientId,
+                            ClientSecret = clientSecret,
+                            GrantType = "client_credentials"
+                        };
+                        var responseMessage = await httpClient.PostAsJsonAsync("http://localhost:5127/api/Connect/Token", accessTokenRequestModel);
+
+                        if (responseMessage.IsSuccessStatusCode)
+                        {
+                            refreshTokenResponseModel = await responseMessage.Content.ReadFromJsonAsync<RefreshTokenResponseModel>();
+
+                            clientToken.ClientCredentialTable = new ClientCredentialTable()
+                            {
+                                AccessToken = refreshTokenResponseModel!.AccessToken,
+                                RefreshToken = refreshTokenResponseModel.RefreshToken,
+                                AccessTime = refreshTokenResponseModel.AccessTime,
+                                RefreshTime = refreshTokenResponseModel.RefreshTime
+                            };
+
+                            await yarpDbContext.SaveChangesAsync();
+
+                            string accessToken = refreshTokenResponseModel.AccessToken;
+                            proxyRequest.Headers.Add("Authorization", $"Bearer {accessToken}");
+                        }
+
                     }
                 }
             }
